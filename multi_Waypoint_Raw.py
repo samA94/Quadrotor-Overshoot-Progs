@@ -92,7 +92,7 @@ def main():
     while local_Pose.pose.position.z < .95 * int(travel_Height):
         takeoff_Waypoint = set_Local_Waypoint(0,0,10,0.01,0.01,2, 0)
         pub_Position.publish(takeoff_Waypoint)
-        time.sleep(0.2)
+        time.sleep(0.1)
         height = read_Position.altitude - ground_Level[0]
         print "Taking off.  The height is: ", height       
     
@@ -100,11 +100,11 @@ def main():
     time.sleep(0.4)
 
     #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 7.5:
-        first_Waypoint = set_Local_Waypoint(0,250,10, 0, 3, 0, 0)
+    while local_Vel.twist.linear.y < 4.5:
+        first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print local_Pose.pose.position.y
+        print "Distance North of home.", local_Pose.pose.position.y
 
     print "Recording data."
 
@@ -117,23 +117,28 @@ def main():
     time1 = time.time()
 
     while time.time() - time1 < 12.5:
-        first_Waypoint = set_Local_Waypoint(0,250,10, 0, 3, 0, 0)
+        desired_Y = local_Pose.pose.position.y + 5
+
+        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print local_Pose.pose.position.y
+        print "Distance North of home.", local_Pose.pose.position.y
 
     pos_Y = local_Pose.pose.position.y
-    distance = 600
+    distance = 100
+
     #Set waypoint off to the side, and send at 10 Hz
     while local_Pose.pose.position.x < .95*distance:
-        final_Waypoint = set_Local_Waypoint(distance, pos_Y, 10, 3, 0.01, 0.01, 4.71)
+        desired_X = local_Pose.pose.position.x + 5
+
+        final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 10, 0.01, 0.01, 4.71)
         if i < 111:
             print final_Waypoint
             i = i + 1
             print "Second Flight Waypoint Has Been Set."
         pub_Position.publish(final_Waypoint)
         time.sleep(0.1)
-        print local_Pose.pose.position.y
+        print "Distance North of home.", local_Pose.pose.position.y
 
     #Change mode to LOITER so that the quadrotor maintains its final position.
     rospy.wait_for_service("mavros/set_mode")
