@@ -121,10 +121,11 @@ def main():
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print local_Pose.pose.position.y
+    pos_Y = local_Pose.pose.position.y
 
     #Set waypoint off to the side, and send at 10 Hz
     while local_Pose.pose.position.x < 95:
-        final_Waypoint = set_Local_Waypoint(100, 150, 10, 3, 0.01, 0.01, 4.71)
+        final_Waypoint = set_Local_Waypoint(100, pos_Y, 10, 3, 0.01, 0.01, 4.71)
         if i < 111:
             i = i + 1
             print "Second Flight Waypoint Has Been Set."
