@@ -100,7 +100,7 @@ def main():
     time.sleep(0.4)
 
     #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 4.5:
+    while local_Vel.twist.linear.y < 7.5:
         first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
@@ -117,7 +117,7 @@ def main():
     time1 = time.time()
 
     while time.time() - time1 < 12.5:
-        desired_Y = local_Pose.pose.position.y + 5
+        desired_Y = local_Pose.pose.position.y + 10
 
         first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
@@ -125,11 +125,11 @@ def main():
         print "Distance North of home.", local_Pose.pose.position.y
 
     pos_Y = local_Pose.pose.position.y
-    distance = 100
+    distance = 200
 
     #Set waypoint off to the side, and send at 10 Hz
     while local_Pose.pose.position.x < .95*distance:
-        desired_X = local_Pose.pose.position.x + 5
+        desired_X = local_Pose.pose.position.x + 10
 
         final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 10, 0.01, 0.01, 4.71)
         if i < 111:
