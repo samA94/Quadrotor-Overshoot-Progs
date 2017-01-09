@@ -117,21 +117,21 @@ def main():
     time1 = time.time()
 
     while time.time() - time1 < 12.5:
-        desired_Y = local_Pose.pose.position.y + 10
+        desired_Y = local_Pose.pose.position.y + 1
 
-        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
+        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print "Distance North of home.", local_Pose.pose.position.y
 
     pos_Y = local_Pose.pose.position.y
-    distance = 200
+    distance = 100
 
     #Set waypoint off to the side, and send at 10 Hz
     while local_Pose.pose.position.x < .95*distance:
-        desired_X = local_Pose.pose.position.x + 10
+        desired_X = local_Pose.pose.position.x + 1
 
-        final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 10, 0.01, 0.01, 4.71)
+        final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 5, 0, 0, 4.71)
         if i < 111:
             print final_Waypoint
             i = i + 1
