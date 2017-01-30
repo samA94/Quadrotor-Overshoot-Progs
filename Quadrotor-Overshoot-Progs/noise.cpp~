@@ -1,0 +1,9 @@
+    //Added by Sam Allison, 1/10/2017 to increase noise in GPS simulation
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution(0.0,0.0001);
+
+    double lat_Noise = distribution(generator);
+    double lon_Noise = distribution(generator);
+
+    std::normal_distribution<double> dist(0.0,5);
+    double alt_Noise = dist(generator);

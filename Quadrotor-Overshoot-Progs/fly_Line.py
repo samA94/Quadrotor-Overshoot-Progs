@@ -1,9 +1,8 @@
 import rospy
-from geometry_msgs.msg import PoseStamped, TwistStamped, Point, Wrench
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.srv import CommandBool, SetMode, StreamRate
 from mavros_msgs.msg import PositionTarget
 from sensor_msgs.msg import NavSatFix
-from gazebo_msgs.srv import ApplyBodyWrench
 import time
 import sys
 
@@ -105,64 +104,28 @@ def main():
         first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance east of home.", local_Pose.pose.position.x
+        print "Distance North of home.", local_Pose.pose.position.y
 
     print "Recording data."
 
     #Need to add calls to programs for collecting data here.
 
 
+
+
+
     time1 = time.time()
 
-    while time.time() - time1 < 10:
-        desired_Y = local_Pose.pose.position.y + 15
+    while time.time() - time1 < 12.5:
+        desired_Y = local_Pose.pose.position.y + 10
 
-        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
+        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance east of home.", local_Pose.pose.position.x
+        print "Distance North of home.", local_Pose.pose.position.y
 
-    rospy.wait_for_service("/gazebo/apply_body_wrench")
-    apply_Force = rospy.ServiceProxy("gazebo/apply_body_wrench", ApplyBodyWrench)
-
-    #apply_Force('body_name: iris::base_link' ,'reference_frame: iris::base_link', 'reference_point: {x: 0, y: 0, z: 0}', 'wrench: { force: {x: 500, y: 0, z: 0}, torque: { x: 0, y: 0 , z: 0 } }', 'start_time: 0', 'duration: 10' )
-
-    r_Point = Point()
-    r_Point.x = 0
-    r_Point.y = 0
-    r_Point.z = 0
-
-    applied_wrench = Wrench()
-    applied_wrench.force.x = 5
-    applied_wrench.force.y = 0
-    applied_wrench.force.z = 0
-    applied_wrench.torque.x = 0
-    applied_wrench.torque.y = 0
-    applied_wrench.torque.z = 0
-
-    startTime = rospy.Time()
-    startTime.secs = 0
-    startTime.nsecs = 1
-
-    timeDuration = rospy.Time()
-    timeDuration.secs = 30
-    timeDuration.nsecs = 0
-
-    print "Applying force"
-
-    apply_Force("iris::base_link", "iris::base_link", r_Point, applied_wrench, startTime, timeDuration)
-
-
-    time2 = time.time()
-
-    while time.time() - time2 < 30:
-        desired_Y = local_Pose.pose.position.y + 15
-
-        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
-        pub_Position.publish(first_Waypoint)
-        time.sleep(0.1)
-        print "Distance east of home.", local_Pose.pose.position.x
-
+    pos_Y = local_Pose.pose.position.y
+   
 
     #Change mode to LOITER so that the quadrotor maintains its final position.
     rospy.wait_for_service("mavros/set_mode")

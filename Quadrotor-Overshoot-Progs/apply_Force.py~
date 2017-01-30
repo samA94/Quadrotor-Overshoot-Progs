@@ -145,7 +145,7 @@ def main():
     startTime.nsecs = 1
 
     timeDuration = rospy.Time()
-    timeDuration.secs = 30
+    timeDuration.secs = 20
     timeDuration.nsecs = 0
 
     print "Applying force"
@@ -155,7 +155,7 @@ def main():
 
     time2 = time.time()
 
-    while time.time() - time2 < 30:
+    while time.time() - time2 < 20:
         desired_Y = local_Pose.pose.position.y + 15
 
         first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 10, 0, 0)
