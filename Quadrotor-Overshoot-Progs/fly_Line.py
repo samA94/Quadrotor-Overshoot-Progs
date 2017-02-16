@@ -17,7 +17,7 @@ setRate = rospy.ServiceProxy("mavros/set_stream_rate", StreamRate)
 setRate(0, 50, 1)
 rospy.Rate(50.0)
 
-global read_Position, local_Pose, local_Vel
+global local_Pose, local_Vel#, read_Position
 
 def quad_Command(mode, armVar = False):
     rospy.wait_for_service("mavros/cmd/arming")
@@ -35,10 +35,10 @@ def quad_Command(mode, armVar = False):
     print "System Arm Status: ", armVar
 
 
-def position_callback(GPS_Position_From_Quad):
+#def position_callback(GPS_Position_From_Quad):
     #function to get the global position of the quad
-    global read_Position
-    read_Position = GPS_Position_From_Quad
+    #global read_Position
+    #read_Position = GPS_Position_From_Quad
 
 def local_Pos_Callback(data):
     #Local position data
@@ -50,23 +50,25 @@ def local_Vel_Callback(data):
     local_Vel = data
 
 def main():
-    global read_Position, local_Pose, local_Vel
+    global local_Pose, local_Vel#, read_Position
 
-    rospy.Subscriber("/mavros/global_position/global", NavSatFix, position_callback)
-    rospy.Subscriber("/mavros/local_position/pose", PoseStamped, local_Pos_Callback)
-    rospy.Subscriber("/mavros/local_position/velocity", TwistStamped, local_Vel_Callback)
+    #rospy.Subscriber("/mavros/global_position/global", NavSatFix, position_callback)
+    rospy.Subscriber("/dGPS/Position", PoseStamped, local_Pos_Callback)
+    rospy.Subscriber("/dGPS/Velocity", TwistStamped, local_Vel_Callback)
 
     pub_Position = rospy.Publisher("/mavros/setpoint_raw/local", PositionTarget, queue_size = 0)
     
     time.sleep(.1)
     #Set home position
-    home_Position = read_Position
+    home_Position = local_Pose
+    #home_North = (local_Pose.pose.position.x)
+    #home_East = (local_Pose.pose.position.y)
 
-    travel_Height = 10
+    travel_Height = 20
 
     #Assign tuple with maximum allowable altitude
-    max_Height = (read_Position.altitude + 50,)
-    ground_Level = (read_Position.altitude,)
+    max_Height = (local_Pose.pose.position.z + 50,)
+    ground_Level = (local_Pose.pose.position.z,)
     print "The home position is: ", home_Position
 
     #Display takeoff waypoint to user for 1 second
@@ -89,24 +91,24 @@ def main():
     quad_Command(mode_List, True)
 
     #take off to requested height
-    while local_Pose.pose.position.z < .95 * int(travel_Height):
-        takeoff_Waypoint = set_Local_Waypoint(0,0,10,0.01,0.01,2, 0)
+    while (local_Pose.pose.position.z-ground_Level[0]) < .95 * int(travel_Height):
+        takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0.01,0.01,2, 0)
         pub_Position.publish(takeoff_Waypoint)
         time.sleep(0.1)
-        height = read_Position.altitude - ground_Level[0]
+        height = local_Pose.pose.position.z - ground_Level[0]
         print "Taking off.  The height is: ", height       
     
     print "The desired height has been reached: ", read_Position.altitude - ground_Level[0]
     time.sleep(0.4)
 
     #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 7.5:
+    while local_Vel.twist.linear.y < 7.0:
         first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.y
+        print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
 
-    print "Recording data."
+    print "Record data."
 
     #Need to add calls to programs for collecting data here.
 
@@ -117,14 +119,14 @@ def main():
     time1 = time.time()
 
     while time.time() - time1 < 12.5:
-        desired_Y = local_Pose.pose.position.y + 10
+        desired_North = local_Pose.pose.position.x + 10
 
-        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 5, 0, 0)
+        first_Waypoint = set_Local_Waypoint(0,desired_North,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.y
+        print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
 
-    pos_Y = local_Pose.pose.position.y
+    pos_N = local_Pose.pose.position.x
    
 
     #Change mode to LOITER so that the quadrotor maintains its final position.

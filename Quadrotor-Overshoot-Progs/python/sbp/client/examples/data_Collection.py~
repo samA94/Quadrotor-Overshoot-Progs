@@ -1,0 +1,51 @@
+import rospy
+from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import PoseStamped, TwistStamped
+import time
+import os
+
+global pos_File
+
+def callback(data):
+    global pos_File
+
+    timestamp = float(data.header.stamp.secs) + float(data.header.stamp.nsecs)/1000000000
+    timestamp = repr(timestamp)
+
+    pos_File.write(timestamp + ',')
+    pos_File.write(str(data.latitude) + ',')
+    pos_File.write(str(data.longitude) + ',')
+    pos_File.write(str(data.altitude) + '\n')
+    pos_File.flush()
+
+
+def posCallback(data):
+    
+
+def velCallback(data):
+
+
+
+def collect():
+
+    filenameLocal = "/home/Lab/Data_From_Tests/localPose" + str(datetime.datetime.utcnow()) + ".txt"
+
+    filenameGPS = "/home/Lab/Data_From_Tests/localGPS" + str(datetime.datetime.utcnow()) + ".txt"
+
+    filenameVelocity = "/home/Lab/Data_From_Tests/Velocity" + str(datetime.datetime.utcnow()) + ".txt"
+
+    
+    if os.path.isfile(filenameLocal):
+        print("Error: Filename already exists")
+        SystemExit
+
+
+    pos_File = open(filename, 'w')
+    pos_File.write('Fused Onboard Data Storage' + '\n')
+
+
+
+    rospy.Subscriber("/dGPS/Global", NavSatFix, globalCallback)
+    rospy.Subscriber("/dGPS/Position", PoseStamped, posCallback)
+    rospy.Subscriber("/dGPS/Velocity", TwistStamped, velCallback
+    rospy.spin()

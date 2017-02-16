@@ -16,7 +16,10 @@ printing them out.
 """
 import matplotlib.pyplot as plt
 
+from data_Collection import collect
+
 import time
+import sys
 from datetime import datetime, timedelta
 import threading
 
@@ -30,7 +33,8 @@ from sbp.client.loggers.json_logger import JSONLogger
 from sbp.navigation import SBP_MSG_BASELINE_NED, MsgBaselineNED, SBP_MSG_VEL_NED,MsgVelNED, SBP_MSG_POS_LLH, MsgPosLLH, SBP_MSG_DOPS, MsgDops
 import argparse
 
-global source
+global source, exitFlag
+exitFlag = False
 
 
 def convert_Timestamp(timestring):
@@ -49,9 +53,9 @@ def convert_Timestamp(timestring):
 
 
 def velocity_NED():
-    global source
+    global source, exitFlag
     vel = TwistStamped()
-    pub_Velocity = rospy.Publisher("dGPS_Velocity", TwistStamped, queue_size=2)
+    pub_Velocity = rospy.Publisher("/dGPS/Velocity", TwistStamped, queue_size=2)
 
     for msg, metadata in source.filter(SBP_MSG_VEL_NED):
         #print "Velocities: %.3f,%.3f,%.3f" % (msg.n*1e-3, msg.e*1e-3, msg.d*1e-3)
@@ -66,17 +70,20 @@ def velocity_NED():
         vel.twist.linear.y = msg.e/1000.0
         vel.twist.linear.z = msg.d/1000.0
 
-        pub_Velocity.publish(vel)
+        if exitFlag==False:
+            pub_Velocity.publish(vel)
+        else:
+            sys.exit()
         
 
         
 def baseline_NED():
-    global source
+    global source, exitFlag
     pos = PoseStamped()
-    pub_Position = rospy.Publisher("dGPS_Position", PoseStamped, queue_size=2)
+    pub_Position = rospy.Publisher("/dGPS/Position", PoseStamped, queue_size=2)
 
-    fig = plt.figure(1)
-    plt.show(block=False)
+    #fig = plt.figure(1)
+    #plt.show(block=False)
 
     x_Fixed = []
     y_Fixed = []
@@ -97,34 +104,38 @@ def baseline_NED():
         pos.pose.position.y = msg.e/1000.0
         pos.pose.position.z = msg.d/1000.0
 
-        pub_Position.publish(pos)
+        if exitFlag==False:
+            pub_Position.publish(pos)
+        else:
+            sys.exit()
 
         #if flags=1, fixed.  otherwise, not fixed
         status = msg.flags
         
         if status == 1:
-            x_Fixed.append(msg.n)
-            y_Fixed.append(msg.e)
-            plt.plot(y_Fixed, x_Fixed, '-y')
+            #x_Fixed.append(msg.n)
+            #y_Fixed.append(msg.e)
+            #plt.plot(y_Fixed, x_Fixed, '-y')
             #plt.scatter(msg.e, msg.n)
-            plt.draw()
+            #plt.draw()
+            #plt.show
             if len(x_Fixed) % 20 == 0:
                 print "Fixed"
 
         else:
-            x_Other.append(msg.n)
-            y_Other.append(msg.e)
-            plt.plot(y_Other, x_Other, '-b')
+            #x_Other.append(msg.n)
+            #y_Other.append(msg.e)
+            #plt.plot(y_Other, x_Other, '-b')
             #plt.scatter(msg.e, msg.n)
-            plt.draw()
+            #plt.draw()
+            #plt.show()
             if len(x_Other) % 20 == 0:
                 print "Non-fixed RTK solution"
 
-
 def gps_Pos():
-    global source
+    global source, exitFlag
     pos_Global = NavSatFix()
-    pub_Global = rospy.Publisher("dGPS_Global", NavSatFix, queue_size=2)
+    pub_Global = rospy.Publisher("/dGPS/Global", NavSatFix, queue_size=2)
 
     for msg, metadata in source.filter(SBP_MSG_POS_LLH):
         timestring = metadata['time']
@@ -133,16 +144,27 @@ def gps_Pos():
 
         pos_Global.header.stamp.secs = unix_Time
         pos_Global.header.stamp.nsecs = nano_Secs
-
         pos_Global.latitude = msg.lat
         pos_Global.longitude = msg.lon
         pos_Global.altitude = msg.height
+        
+        if exitFlag==False:
+            pub_Global.publish(pos_Global)
+        else:
+            sys.exit()
 
-        pub_Global.publish(pos_Global)
+
+def dataCollect():
+
+    if exitFlag==False:
+        collect()
+    else:
+        sys.exit()
         
 
 def main():
-    global source
+    global source, exitFlag
+
     rospy.init_node("dGPS_Data", anonymous=True)
 
     parser = argparse.ArgumentParser(description="Swift Navigation SBP Example.")
@@ -158,23 +180,21 @@ def main():
                 
                 t1 = threading.Thread(name='baseline_NED', target=baseline_NED)
                 t2 = threading.Thread(name='Vel_NED', target=velocity_NED)
-                
                 t4 = threading.Thread(name='gps_Pos', target=gps_Pos)
 
+                dataCollectThread = threading.Thread(name='dataCollect', target = dataCollect)
 
                 t1.start()
                 t2.start()
-                
                 t4.start()
+
+                dataCollectThread.start()
+
                 rospy.spin()
-                while True:
-                    time.sleep(1)
 
-
-            except KeyboardInterrupt: 
-                pass
-
-
+            except KeyboardInterrupt:
+                exitFlag = True
+                raise SystemExit
 
 
 if __name__ == "__main__":
