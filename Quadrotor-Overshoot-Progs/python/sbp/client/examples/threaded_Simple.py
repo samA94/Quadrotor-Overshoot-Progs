@@ -82,8 +82,8 @@ def baseline_NED():
     pos = PoseStamped()
     pub_Position = rospy.Publisher("/dGPS/Position", PoseStamped, queue_size=2)
 
-    #fig = plt.figure(1)
-    #plt.show(block=False)
+    fig = plt.figure(1)
+    plt.show(block=False)
 
     x_Fixed = []
     y_Fixed = []
@@ -100,8 +100,8 @@ def baseline_NED():
         pos.header.stamp.secs = unix_Time
         pos.header.stamp.nsecs = nano_Secs
         
-        pos.pose.position.x = msg.n/1000.0
-        pos.pose.position.y = msg.e/1000.0
+        pos.pose.position.x = -msg.n/1000.0
+        pos.pose.position.y = -msg.e/1000.0
         pos.pose.position.z = msg.d/1000.0
 
         if exitFlag==False:
@@ -113,23 +113,25 @@ def baseline_NED():
         status = msg.flags
         
         if status == 1:
-            #x_Fixed.append(msg.n)
-            #y_Fixed.append(msg.e)
-            #plt.plot(y_Fixed, x_Fixed, '-y')
-            #plt.scatter(msg.e, msg.n)
-            #plt.draw()
+            x_Fixed.append(-msg.n/1000.0)
+            y_Fixed.append(-msg.e/1000.0)
             #plt.show
-            if len(x_Fixed) % 20 == 0:
+            if len(x_Fixed) % 10 == 0:
+                plt.plot(y_Fixed, x_Fixed, '-y')
+                #plt.scatter(msg.e, msg.n)
+                plt.draw()
+                print status
                 print "Fixed"
 
         else:
-            #x_Other.append(msg.n)
-            #y_Other.append(msg.e)
-            #plt.plot(y_Other, x_Other, '-b')
-            #plt.scatter(msg.e, msg.n)
-            #plt.draw()
+            x_Other.append(-msg.n/1000.0)
+            y_Other.append(-msg.e/1000.0)
             #plt.show()
-            if len(x_Other) % 20 == 0:
+            if len(x_Other) % 10 == 0:
+                plt.plot(y_Other, x_Other, '-b')
+                #plt.scatter(msg.e, msg.n)
+                plt.draw()
+                print status
                 print "Non-fixed RTK solution"
 
 def gps_Pos():
@@ -141,6 +143,8 @@ def gps_Pos():
         timestring = metadata['time']
         #print "%.10f, %.10f" % (msg.lat, msg.lon)
         unix_Time, nano_Secs = convert_Timestamp(timestring)
+
+        pos_Global.status.status = msg.flags
 
         pos_Global.header.stamp.secs = unix_Time
         pos_Global.header.stamp.nsecs = nano_Secs

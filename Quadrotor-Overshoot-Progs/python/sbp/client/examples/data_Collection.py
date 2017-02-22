@@ -16,7 +16,8 @@ def globalCallback(data):
     glob_File.write(timestamp + ',')
     glob_File.write(str(data.latitude) + ',')
     glob_File.write(str(data.longitude) + ',')
-    glob_File.write(str(data.altitude) + '\n')
+    glob_File.write(str(data.altitude) + ',')
+    glob_File.write(str(data.status.status) + '\n')
     glob_File.flush()
 
 
