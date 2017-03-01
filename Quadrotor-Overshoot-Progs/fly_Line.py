@@ -108,7 +108,7 @@ def main():
         time.sleep(0.1)
         print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
 
-    print "Record data."
+    #print "Record data."
 
     #Need to add calls to programs for collecting data here.
 
@@ -119,14 +119,14 @@ def main():
     time1 = time.time()
 
     while time.time() - time1 < 12.5:
-        desired_North = local_Pose.pose.position.x + 10
+        desired_North = local_Pose.pose.position.x - home_Position.pose.position.x + 10
 
         first_Waypoint = set_Local_Waypoint(0,desired_North,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
 
-    pos_N = local_Pose.pose.position.x
+    pos_N = local_Pose.pose.position.x - home_Position.pose.position.x
    
 
     #Change mode to LOITER so that the quadrotor maintains its final position.
