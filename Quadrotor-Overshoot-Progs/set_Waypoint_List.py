@@ -1,13 +1,14 @@
 import rospy
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from mavros_msgs.srv import CommandBool, SetMode, StreamRate
-from mavros_msgs.msg import PositionTarget
+from mavros_msgs.srv import CommandBool, SetMode, StreamRate, WaypointPush
+from mavros_msgs.msg import PositionTarget, WaypointList
 from sensor_msgs.msg import NavSatFix
 import time
 import sys
 import threading
 
 from fnxnsForRaw import set_Local_Waypoint
+from funcSetWaypointList import set_Waypoint
 import collectData
 
 rospy.init_node("send_Waypoints")
@@ -62,6 +63,9 @@ def collect_Data():
 def main():
     global read_Position, local_Pose, local_Vel, exitFlag
 
+    rospy.wait_for_service("/mavros/mission/push")
+    pushWaypoints = rospy.ServiceProxy("/mavros/mission/push", WaypointPush)
+
     rospy.Subscriber("/mavros/global_position/global", NavSatFix, position_callback)
     rospy.Subscriber("/mavros/local_position/pose", PoseStamped, local_Pos_Callback)
     rospy.Subscriber("/mavros/local_position/velocity", TwistStamped, local_Vel_Callback)
@@ -85,71 +89,30 @@ def main():
     max_Height = (read_Position.altitude + 50,)
     ground_Level = (read_Position.altitude,)
     print "The home position is: ", home_Position
+    
+    list_Waypoints = WaypointList()
 
-    #Display takeoff waypoint to user for 1 second
-    takeoff_Waypoint = set_Local_Waypoint(0,0,10,0.01,0.01,2, 0)
-    print takeoff_Waypoint
-    time.sleep(1)
+    posX = local_Pose.pose.position.x
+    posY = local_Pose.pose.position.y
+    posZ = local_Pose.pose.position.z
 
-    #Waypoint has to be sent to FCU before mode can be changed to OFFBOARD.
-    i = 0
-    while i < 100:
-        takeoff_Waypoint = set_Local_Waypoint(0,0,10,0.01,0.01,2, 0)
-        pub_Position.publish(takeoff_Waypoint)
-        time.sleep(0.01)
-        i = i + 1
-        print i
+    list1 = [None, None]
+
+    list1[0] = (set_Waypoint(posX + .0001, posY, posZ))
+    list1[1] = (set_Waypoint(posX + .0001, posY + .0001, posZ))
+
+    list_Waypoints.waypoints = set_Waypoint(posX, posY, posZ + 50)
+
+    
+    pushWaypoints(list1)
 
     #Set mode variable to OFFBOARD
-    mode_List = [0, "OFFBOARD"]
+    mode_List = [0, "Auto.Mission"]
     #Call function to set mode and arm motor
     quad_Command(mode_List, True)
 
-    #take off to requested height
-    while local_Pose.pose.position.z < .95 * int(travel_Height):
-        takeoff_Waypoint = set_Local_Waypoint(0,0,10,0.01,0.01,2, 0)
-        pub_Position.publish(takeoff_Waypoint)
-        time.sleep(0.1)
-        height = read_Position.altitude - ground_Level[0]
-        print "Taking off.  The height is: ", height       
-    
-    print "The desired height has been reached: ", read_Position.altitude - ground_Level[0]
-    time.sleep(0.4)
+    time.sleep(30)
 
-    #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 7.5:
-        first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
-        pub_Position.publish(first_Waypoint)
-        time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.y
-
-    #print "Recording data."
-
-    #Need to add calls to programs for collecting data here.
-
-    time1 = time.time()
-    while time.time() - time1 < 25:
-
-        first_Waypoint = set_Local_Waypoint(0,260,10, 0, 5, 0, 0)
-        pub_Position.publish(first_Waypoint)
-        time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.y
-
-
-    time2 = time.time()
-    desired_Y = local_Pose.pose.position.y + 10
-
-    while time.time() - time2 < 12.5:
-
-        first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 5, 0, 0)
-        pub_Position.publish(first_Waypoint)
-        time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.y
-
-
-
-    pos_Y = local_Pose.pose.position.y
-   
     print "Loitering"
     #Change mode to LOITER so that the quadrotor maintains its final position.
     rospy.wait_for_service("mavros/set_mode")

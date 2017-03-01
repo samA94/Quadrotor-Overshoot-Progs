@@ -5,8 +5,10 @@ from mavros_msgs.msg import PositionTarget
 from sensor_msgs.msg import NavSatFix
 import time
 import sys
+import threading
 
 from fnxnsForRaw import set_Local_Waypoint
+import collectData
 
 rospy.init_node("send_Waypoints")
 
@@ -49,6 +51,13 @@ def local_Vel_Callback(data):
     global local_Vel
     local_Vel = data
 
+
+def collect_Data():
+    collectData.collect()
+
+
+
+
 def main():
     global read_Position, local_Pose, local_Vel
 
@@ -58,6 +67,16 @@ def main():
 
     pub_Position = rospy.Publisher("/mavros/setpoint_raw/local", PositionTarget, queue_size = 0)
     
+
+
+
+    t1 = threading.Thread(name='collect_Data', target=collect_Data)
+    t1.start()    
+
+
+
+
+
     time.sleep(.1)
     #Set home position
     home_Position = read_Position
@@ -115,9 +134,9 @@ def main():
 
 
     time1 = time.time()
-
+    desired_Y = local_Pose.pose.position.y + 150
     while time.time() - time1 < 12.5:
-        desired_Y = local_Pose.pose.position.y + 10
+        #desired_Y = local_Pose.pose.position.y + 10
 
         first_Waypoint = set_Local_Waypoint(0,desired_Y,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
@@ -128,10 +147,13 @@ def main():
     distance = 100
 
     #Set waypoint off to the side, and send at 10 Hz
+    desired_X = local_Pose.pose.position.x + 100
     while local_Pose.pose.position.x < .95*distance:
-        desired_X = local_Pose.pose.position.x + 10
+        #desired_X = local_Pose.pose.position.x + 10
 
-        final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 5, 0, 0, 4.71)
+        #final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 5, 0, 0, 4.71)
+        final_Waypoint = set_Local_Waypoint(desired_X, pos_Y, 10, 5, 0, 0, 0)
+
         if i < 111:
             print final_Waypoint
             i = i + 1
