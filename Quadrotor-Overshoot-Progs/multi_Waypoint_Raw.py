@@ -93,15 +93,18 @@ def main():
     print "The desired height has been reached: ", local_Pose.pose.position.z - ground_Level[0]
     time.sleep(0.4)
 
+
+    #set value for takeoff position - might be slightly off from iris home position
+    zero_East = local_Pose.pose.position.y-home_Position.pose.position.y
+
     #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 4.5:
-        first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
+    while local_Vel.twist.linear.x < 4.5:
+        first_Waypoint = set_Local_Waypoint(zero_North,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print "Distance North of home.", (local_Pose.pose.position.x-home_Position.pose.position.x)
 
-    print "Recording data."
-
+    #print "Recording data."
     #Need to add calls to programs for collecting data here.
 
 
@@ -113,7 +116,7 @@ def main():
     while time.time() - time1 < 12.5:
         desired_X = local_Pose.pose.position.x + 10
 
-        first_Waypoint = set_Local_Waypoint(0,desired_X,10, 0, 5, 0, 0)
+        first_Waypoint = set_Local_Waypoint(zero_East,desired_X,10, 0, 5, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print "Distance North of home.", (local_Pose.pose.position.x-home_Position.pose.position.x)
@@ -126,7 +129,7 @@ def main():
     while (local_Pose.pose.position.y-home_Position.pose.position.y) < .95*distance and time.time()-time2<10:
         desired_Y = local_Pose.pose.position.y-home_Position.pose.position.y + 10
 
-        final_Waypoint = set_Local_Waypoint(desired_Y, pos_Y, 10, 5, 0, 0, 4.71)
+        final_Waypoint = set_Local_Waypoint(desired_Y, pos_X, 10, 5, 0, 0, 4.71)
         if i < 111:
             print final_Waypoint
             i = i + 1
