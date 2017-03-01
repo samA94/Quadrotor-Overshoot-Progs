@@ -1,12 +1,11 @@
 import rospy
 from sensor_msgs.msg import NavSatFix
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from std_msgs.msg import String
 import time
 import os
 import datetime
 
-global pos_File, glob_File, vel_File, dop_File
+global pos_File, glob_File, vel_File
 
 def globalCallback(data):
     global glob_File
@@ -18,7 +17,6 @@ def globalCallback(data):
     glob_File.write(str(data.latitude) + ',')
     glob_File.write(str(data.longitude) + ',')
     glob_File.write(str(data.altitude) + ',')
-    glob_File.write(str(data.status.service) + ',')
     glob_File.write(str(data.status.status) + '\n')
     glob_File.flush()
 
@@ -48,14 +46,10 @@ def velCallback(data):
     vel_File.write(str(data.twist.linear.z) + '\n')
     vel_File.flush()
 
-def dopCallback(data):
-    global dop_File
-    dop_File.write(data.data + '\n')
-    dop_File.flush()
 
 
 def collect():
-    global pos_File, vel_File, glob_File, dop_File
+    global pos_File, vel_File, glob_File
 
     filenameLocal = "/home/lab/Data_From_Tests/localPose" + str(datetime.datetime.utcnow()) + ".txt"
 
@@ -63,7 +57,6 @@ def collect():
 
     filenameVelocity = "/home/lab/Data_From_Tests/Velocity" + str(datetime.datetime.utcnow()) + ".txt"
 
-    filenameDOP = "/home/lab/Data_From_Tests/DOP" + str(datetime.datetime.utcnow()) + ".txt"
     
     if os.path.isfile(filenameLocal):
         print("Error: Filename already exists")
@@ -71,16 +64,13 @@ def collect():
 
 
     pos_File = open(filenameLocal, 'w')
-    pos_File.write('NEU_Time, N, E, U' + '\n')
+    pos_File.write('NED coordinates' + '\n')
 
     vel_File = open(filenameVelocity, 'w')
-    vel_File.write('timestampeVelocities, N, E, U' + '\n')
+    vel_File.write('VelocitiesN, E, D' + '\n')
 
     glob_File = open(filenameGPS, 'w')
-    glob_File.write('GPS_time, Lat,Lon,Alt, nsats, status' + '\n')
-
-    dop_File = open(filenameDOP, 'w')
-    dop_File.write('timestamp, pdop, gdop, tdop, hdop, vdop' + '\n')
+    glob_File.write('GPS_time Lat,Lon,Alt' + '\n')
 
     #rospy.init_node("collect_Data")
 
@@ -88,5 +78,4 @@ def collect():
     rospy.Subscriber("/dGPS/Global", NavSatFix, globalCallback)
     rospy.Subscriber("/dGPS/Position", PoseStamped, posCallback)
     rospy.Subscriber("/dGPS/Velocity", TwistStamped, velCallback)
-    rospy.Subscriber("/dGPS/DOP", String, dopCallback)
     rospy.spin()
