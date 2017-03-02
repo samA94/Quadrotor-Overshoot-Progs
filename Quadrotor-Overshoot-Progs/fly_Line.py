@@ -98,11 +98,12 @@ def main():
         height = local_Pose.pose.position.z - ground_Level[0]
         print "Taking off.  The height is: ", height       
     
-    print "The desired height has been reached: ", read_Position.altitude - ground_Level[0]
+    print "The desired height has been reached: ", local_Pose.pose.position - ground_Level[0]
     time.sleep(0.4)
 
     #Set first waypoint and send to quadrotor at 10 Hz
-    while local_Vel.twist.linear.y < 7.0:
+    time0 = time.time()
+    while local_Vel.twist.linear.y < 4.5 and time.time() - time0 < 10:
         first_Waypoint = set_Local_Waypoint(0,250,10, 0, 10, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
@@ -118,7 +119,7 @@ def main():
 
     time1 = time.time()
 
-    while time.time() - time1 < 12.5:
+    while time.time() - time1 < 5:
         desired_North = local_Pose.pose.position.x - home_Position.pose.position.x + 10
 
         first_Waypoint = set_Local_Waypoint(0,desired_North,10, 0, 5, 0, 0)
