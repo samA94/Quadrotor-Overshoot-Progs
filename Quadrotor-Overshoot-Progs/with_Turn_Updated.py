@@ -175,7 +175,7 @@ def main():
     #fly for 10 seconds to build up speed
     #while abs(local_Vel.twist.linear.x) < 6.5 and time.time() - time0 < 10:
     while time.time() - time0 < 10:
-        first_Waypoint = set_Local_Waypoint(0,130,travel_Height, 0, 10, 0, 0)
+        first_Waypoint = set_Local_Waypoint(0,130,travel_Height, 0, 8, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
         print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
@@ -185,6 +185,8 @@ def main():
     time1 = time.time()
     desired_North = 130
 
+    #check to allow turn.  if none, don't turn.  it !none, turn
+    north_Pos = None
 
     while time.time() - time1 < 5:
         #Commented due to faulty dGPS data
@@ -197,17 +199,36 @@ def main():
             break
 
         else:
-            first_Waypoint = set_Local_Waypoint(0,desired_North,travel_Height, 0, 5, 0, 0)
+            first_Waypoint = set_Local_Waypoint(0,desired_North,travel_Height, 0, 8, 0, 0)
             pub_Position.publish(first_Waypoint)
             time.sleep(0.1)
             print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
    
 
+
+
     #if frame_id == 1, execute turn.  Otherwise, go to loiter mode and exit the program.
 
-    modeSet(0, "AUTO.LOITER")
-    time.sleep(5)
-    #RTH can be enabled by using the GCS or the RC controller.
+    if north_Pos == None:
+        print "Turn failed.  Execute RTL"
+        modeSet(0, "AUTO.LOITER")
+        time.sleep(5)
+        sys.exit()
+        #RTH can be enabled by using the GCS or the RC controller.
+
+    else:
+        desired_East = 15
+        turn_Waypoint = set_Local_Waypoint(desired_East, north_Pos, travel_Height, 0, 8, 0, 0)
+        pub_Position.publish(turn_Waypoint)
+        time.sleep(0.1)
+
+
+    time2 = time.time()
+    while time.time() - time2 < 8:
+        desired_East = desired_East + 0.75
+        turn_Waypoint = set_Local_Waypoint(desired_East, north_Pos, travel_Height, 8, 0, 0, 0)
+
+
 
 #Run the program
 if __name__ == "__main__":
