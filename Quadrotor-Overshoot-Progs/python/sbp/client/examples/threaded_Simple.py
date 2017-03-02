@@ -26,6 +26,7 @@ import threading
 import rospy
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import String
 
 from sbp.client.drivers.pyserial_driver import PySerialDriver
 from sbp.client import Handler, Framer
@@ -99,10 +100,12 @@ def baseline_NED():
 
         pos.header.stamp.secs = unix_Time
         pos.header.stamp.nsecs = nano_Secs
+        pos.header.frame_id = str(msg.flags)
         
         pos.pose.position.x = -msg.n/1000.0
         pos.pose.position.y = -msg.e/1000.0
         pos.pose.position.z = msg.d/1000.0
+        
 
         if exitFlag==False:
             pub_Position.publish(pos)
@@ -134,9 +137,31 @@ def baseline_NED():
                 print status
                 print "Non-fixed RTK solution"
 
+
+def dop_Info():
+    global source, exitFlag
+    DOP_String = String()
+    pub_DOP = rospy.Publisher("/dGPS/DOP", String, queue_size = 2)
+    
+    for msg, metadata in source.filter(SBP_MSG_DOPS):
+
+        dop = ''
+        timestring = metadata['time']
+        unixTime, nano_Secs = convert_Timestamp(timestring)
+
+        dop = str(unixTime) + '.' + str(nano_Secs) + ',' + str(msg.pdop) + ',' + str(msg.gdop) + ','
+        dop = dop + str(msg.tdop) + ',' + str(msg.hdop) + ',' + str(msg.vdop)
+
+        DOP_String.data = dop
+        if exitFlag==False:
+            pub_DOP.publish(DOP_String.data)
+        else:
+            sys.exit()
+
+
 def gps_Pos():
     global source, exitFlag
-    pos_Global = NavSatFix()
+    pos_Glob = NavSatFix()
     pub_Global = rospy.Publisher("/dGPS/Global", NavSatFix, queue_size=2)
 
     for msg, metadata in source.filter(SBP_MSG_POS_LLH):
@@ -144,16 +169,17 @@ def gps_Pos():
         #print "%.10f, %.10f" % (msg.lat, msg.lon)
         unix_Time, nano_Secs = convert_Timestamp(timestring)
 
-        pos_Global.status.status = msg.flags
+        pos_Glob.status.status = msg.flags
+        pos_Glob.status.service = msg.n_sats
 
-        pos_Global.header.stamp.secs = unix_Time
-        pos_Global.header.stamp.nsecs = nano_Secs
-        pos_Global.latitude = msg.lat
-        pos_Global.longitude = msg.lon
-        pos_Global.altitude = msg.height
+        pos_Glob.header.stamp.secs = unix_Time
+        pos_Glob.header.stamp.nsecs = nano_Secs
+        pos_Glob.latitude = msg.lat
+        pos_Glob.longitude = msg.lon
+        pos_Glob.altitude = msg.height
         
         if exitFlag==False:
-            pub_Global.publish(pos_Global)
+            pub_Global.publish(pos_Glob)
         else:
             sys.exit()
 
@@ -184,12 +210,14 @@ def main():
                 
                 t1 = threading.Thread(name='baseline_NED', target=baseline_NED)
                 t2 = threading.Thread(name='Vel_NED', target=velocity_NED)
+                t3 = threading.Thread(name='dop_Info', target=dop_Info)
                 t4 = threading.Thread(name='gps_Pos', target=gps_Pos)
 
                 dataCollectThread = threading.Thread(name='dataCollect', target = dataCollect)
 
                 t1.start()
                 t2.start()
+                t3.start()
                 t4.start()
 
                 dataCollectThread.start()
