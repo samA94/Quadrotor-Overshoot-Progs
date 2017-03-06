@@ -101,9 +101,9 @@ def baseline_NED():
         pos.header.stamp.secs = unix_Time
         pos.header.stamp.nsecs = nano_Secs
         pos.header.frame_id = str(msg.flags)
-        
-        pos.pose.position.x = -msg.n/1000.0
-        pos.pose.position.y = -msg.e/1000.0
+        #ENU coords to ROS
+        pos.pose.position.x = -msg.e/1000.0
+        pos.pose.position.y = -msg.n/1000.0
         pos.pose.position.z = msg.d/1000.0
         
 
