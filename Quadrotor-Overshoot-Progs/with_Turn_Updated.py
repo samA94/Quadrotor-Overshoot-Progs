@@ -6,6 +6,7 @@ from sensor_msgs.msg import NavSatFix
 import time
 import sys
 import numpy
+import threading
 
 from fnxnsForRaw import set_Local_Waypoint
 
@@ -65,6 +66,7 @@ def emergency_Loiter():
 
 def main():
     global local_Pose, local_Vel#, read_Position
+    #Use ENU coords
 
     #allow loiter mode to be enabled by pressing the enter key twice
     loiterThread = threading.Thread(name='emergency_Loiter', target=emergency_Loiter)
@@ -90,8 +92,8 @@ def main():
         time.sleep(0.11)
         if local_Pose.header.frame_id==1 and local_Pose.pose.position.z  != list_Heights[len(list_Heights)-1]:
             list_Heights.append(local_Pose.pose.position.z)
-            list_Norths.append(local_Pose.pose.position.x)
-            list_Easts.append(local_Pose.pose.position.y)
+            list_Norths.append(local_Pose.pose.position.y)
+            list_Easts.append(local_Pose.pose.position.x)
 
         else:
             print "Non-Fixed or non unique solution.  Waiting for fix"
@@ -103,10 +105,11 @@ def main():
     #Set home position
     home_Position = PoseStamped()
     home_Position.pose.position.z = numpy.mean(list_Heights)
-    home_Position.pose.position.x = numpy.mean(list_Norths)
-    home_Position.pose.position.y = numpy.mean(list_Easts)
+    home_Position.pose.position.y = numpy.mean(list_Norths)
+    home_Position.pose.position.x = numpy.mean(list_Easts)
 
     travel_Height = 20
+    max_North = 130
 
     #Assign tuple with maximum allowable altitude
     ground_Level = (home_Position.pose.position.z,)
@@ -114,14 +117,14 @@ def main():
 
 
     #Display takeoff waypoint to user for 1 second
-    takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0.01,0.01,2, 0)
+    takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
     print takeoff_Waypoint
     time.sleep(1)
 
     #Waypoint has to be sent to FCU before mode can be changed to OFFBOARD.
     i = 0
     while i < 100:
-        takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0.01,0.01,2, 0)
+        takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
         pub_Position.publish(takeoff_Waypoint)
         time.sleep(0.01)
         i = i + 1
@@ -139,8 +142,7 @@ def main():
 
     #ADD CHECKS FOR FIXED SIGNAL
 
-    while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or
-    (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
+    while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
 
         if local_Pose.header.frame_id ==1:
             if exitFlag == 0:
@@ -150,7 +152,7 @@ def main():
                 time.sleep(3)
                 sys.exit()
 
-            takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0.01,0.01,2, 0)
+            takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
             pub_Position.publish(takeoff_Waypoint)
             time.sleep(0.2)
             height = local_Pose.pose.position.z - ground_Level[0]
@@ -172,18 +174,17 @@ def main():
     #Set first waypoint and send to quadrotor at 10 Hz
     time0 = time.time()
 
-    #fly for 10 seconds to build up speed
+    #fly for 15 seconds to build up speed
     #while abs(local_Vel.twist.linear.x) < 6.5 and time.time() - time0 < 10:
-    while time.time() - time0 < 10:
-        first_Waypoint = set_Local_Waypoint(0,130,travel_Height, 0, 8, 0, 0)
+    while time.time() - time0 < 15:
+        first_Waypoint = set_Local_Waypoint(0,max_North,travel_Height, 0, 8, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
+        print "Distance North of home.", local_Pose.pose.position.y - home_Position.pose.position.y
 
 
 
     time1 = time.time()
-    desired_North = 130
 
     #check to allow turn.  if none, don't turn.  it !none, turn
     north_Pos = None
@@ -194,20 +195,21 @@ def main():
 
 
         if local_Pose.header.frame_id == 1:
-            north_Pos = local_Pose.pose.position.x - home_Position.pose.position.x
+            north_Pos = local_Pose.pose.position.y - home_Position.pose.position.y
             print "Fixed RTK solution.  Turning enabled!!"
             break
 
         else:
-            first_Waypoint = set_Local_Waypoint(0,desired_North,travel_Height, 0, 8, 0, 0)
+            first_Waypoint = set_Local_Waypoint(0,max_North,travel_Height, 0, 8, 0, 0)
             pub_Position.publish(first_Waypoint)
             time.sleep(0.1)
-            print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
+            print "Distance North of home.", local_Pose.pose.position.y - home_Position.pose.position.y
    
 
 
 
     #if frame_id == 1, execute turn.  Otherwise, go to loiter mode and exit the program.
+    #north_Pos will have a numerical value if the turn should be executed
 
     if north_Pos == None:
         print "Turn failed.  Execute RTL"
@@ -224,10 +226,15 @@ def main():
 
 
     time2 = time.time()
-    while time.time() - time2 < 8:
+    while time.time() - time2 < 12:
         desired_East = desired_East + 0.75
         turn_Waypoint = set_Local_Waypoint(desired_East, north_Pos, travel_Height, 8, 0, 0, 0)
+        pub_Position.publish(turn_Waypoint)
+        time.sleep(0.1)
+        print "Distance East: ", local_Pose.pose.position.x
 
+    modeSet(0, "AUTO.LOITER")
+    time.sleep(5)
 
 
 #Run the program

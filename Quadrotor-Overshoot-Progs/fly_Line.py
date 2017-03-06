@@ -90,8 +90,8 @@ def main():
         time.sleep(0.11)
         if local_Pose.header.frame_id==1 and local_Pose.pose.position.z  != list_Heights[len(list_Heights)-1]:
             list_Heights.append(local_Pose.pose.position.z)
-            list_Norths.append(local_Pose.pose.position.x)
-            list_Easts.append(local_Pose.pose.position.y)
+            list_Norths.append(local_Pose.pose.position.y)
+            list_Easts.append(local_Pose.pose.position.x)
 
         else:
             print "Non-Fixed or non unique solution.  Waiting for fix"
@@ -103,8 +103,8 @@ def main():
     #Set home position
     home_Position = PoseStamped()
     home_Position.pose.position.z = numpy.mean(list_Heights)
-    home_Position.pose.position.x = numpy.mean(list_Norths)
-    home_Position.pose.position.y = numpy.mean(list_Easts)
+    home_Position.pose.position.y = numpy.mean(list_Norths)
+    home_Position.pose.position.x = numpy.mean(list_Easts)
 
     travel_Height = 20
 
@@ -175,10 +175,10 @@ def main():
     #fly for 10 seconds to build up speed
     #while abs(local_Vel.twist.linear.x) < 6.5 and time.time() - time0 < 10:
     while time.time() - time0 < 10:
-        first_Waypoint = set_Local_Waypoint(0,130,travel_Height, 0, 10, 0, 0)
+        first_Waypoint = set_Local_Waypoint(0,130,travel_Height, 0, 8, 0, 0)
         pub_Position.publish(first_Waypoint)
         time.sleep(0.1)
-        print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
+        print "Distance North of home.", local_Pose.pose.position.y - home_Position.pose.position.y
 
 
 
@@ -192,15 +192,15 @@ def main():
 
 
         if local_Pose.header.frame_id == 1:
-            north_Pos = local_Pose.pose.position.x - home_Position.pose.position.x
+            north_Pos = local_Pose.pose.position.y - home_Position.pose.position.y
             print "Fixed RTK solution.  Turning enabled!!"
             break
 
         else:
-            first_Waypoint = set_Local_Waypoint(0,desired_North,travel_Height, 0, 5, 0, 0)
+            first_Waypoint = set_Local_Waypoint(0,desired_North,travel_Height, 0, 8, 0, 0)
             pub_Position.publish(first_Waypoint)
             time.sleep(0.1)
-            print "Distance North of home.", local_Pose.pose.position.x - home_Position.pose.position.x
+            print "Distance North of home.", local_Pose.pose.position.y - home_Position.pose.position.y
    
 
     #if frame_id == 1, execute turn.  Otherwise, go to loiter mode and exit the program.
