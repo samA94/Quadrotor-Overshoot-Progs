@@ -19,7 +19,7 @@ setRate = rospy.ServiceProxy("mavros/set_stream_rate", StreamRate)
 setRate(0, 50, 1)
 rospy.Rate(50.0)
 
-global local_Pose, local_Vel, exitFlag#, read_Position
+global local_Pose, local_Vel, fcu_Pose, fcu_Vel, exitFlag#, read_Position
 
 exitFlag = 0
 
@@ -48,6 +48,14 @@ def local_Vel_Callback(data):
     global local_Vel
     local_Vel = data
 
+def fcu_Pos_Callback(data):
+    global fcu_Pose
+    fcu_Pose = data
+
+def fcu_Vel_Callback(data):
+    global fcu_Vel
+    fcu_Vel = data
+
 
 def emergency_Loiter():
     global exitFlag
@@ -65,16 +73,21 @@ def emergency_Loiter():
 
 
 def main():
-    global local_Pose, local_Vel#, read_Position
+    global local_Pose, local_Vel, fcu_Pose, fcu_Vel, exitFlag#, read_Position
     #Use ENU coords
 
     #allow loiter mode to be enabled by pressing the enter key twice
     loiterThread = threading.Thread(name='emergency_Loiter', target=emergency_Loiter)
     loiterThread.start()
 
+    fcu_Pose = PoseStamped()
+
     #rospy.Subscriber("/mavros/global_position/global", NavSatFix, position_callback)
     rospy.Subscriber("/dGPS/Position", PoseStamped, local_Pos_Callback)
     rospy.Subscriber("/dGPS/Velocity", TwistStamped, local_Vel_Callback)
+
+    rospy.Subscriber("/mavros/local_position/pose", PoseStamped, fcu_Pos_Callback)
+    rospy.Subscriber("/mavros/local_position/velocity", TwistStamped, fcu_Vel_Callback)
 
     #allow mode change to LOITER so that the quadrotor maintains its final position.
     rospy.wait_for_service("mavros/set_mode")
@@ -115,6 +128,13 @@ def main():
     ground_Level = (home_Position.pose.position.z,)
     print "The home position is: ", home_Position
 
+    #wait for initial fcu update.
+    while fcu_Pose.pose.position.z == 0.0:
+        time.sleep(0.1)
+        print "Waiting for FCU update"
+
+    fcu_ground_Level = (fcu_Pose.pose.position.z,)
+
 
     #Display takeoff waypoint to user for 1 second
     takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
@@ -142,27 +162,19 @@ def main():
 
     #change to use FCU position and velocity.  Will add delay, but is safer
 
-    while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
+    #while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
+    while (fcu_Pose.pose.position.z-fcu_ground_Level[0]) < .9 * travel_Height or (fcu_Pose.pose.position.z - fcu_ground_Level[0]) > 1.1*travel_Height or abs(fcu_Vel.twist.linear.z) > 0.3:
 
-        if local_Pose.header.frame_id ==1:
-            if exitFlag == 0:
-                modeSet(0, "OFFBOARD")
-                time.sleep(0.1)
-            else:
-                time.sleep(3)
-                sys.exit()
+        if exitFlag != 0:
+            time.sleep(3)
+            sys.exit()
 
-            takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
-            pub_Position.publish(takeoff_Waypoint)
-            time.sleep(0.2)
-            height = local_Pose.pose.position.z - ground_Level[0]
-            print "Taking off.  The height is: ", height
+        takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
+        pub_Position.publish(takeoff_Waypoint)
+        time.sleep(0.2)
+        height = local_Pose.pose.position.z - ground_Level[0]
+        print "Taking off.  The height is: ", height
 
-        else:
-            print "Lost fixed connection"
-            modeSet(0, "AUTO.LOITER")
-            time.sleep(0.2)
-    
     print "The desired height has been reached: ", local_Pose.pose.position.z - ground_Level[0]
     time.sleep(0.4)
 

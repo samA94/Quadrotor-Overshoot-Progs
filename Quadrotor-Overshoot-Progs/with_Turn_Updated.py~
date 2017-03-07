@@ -140,7 +140,7 @@ def main():
 
 
 
-    #change to use FCU position and velocity.  Will add delay, but is safer
+    #ADD CHECKS FOR FIXED SIGNAL
 
     while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
 

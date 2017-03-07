@@ -65,8 +65,7 @@ def emergency_Loiter():
 
 
 def main():
-    global local_Pose, local_Vel#, read_Position
-    #Use ENU coords
+    global local_Pose, local_Vel, exitFlag#, read_Position
 
     #allow loiter mode to be enabled by pressing the enter key twice
     loiterThread = threading.Thread(name='emergency_Loiter', target=emergency_Loiter)
@@ -104,7 +103,9 @@ def main():
 
     #Set home position
     home_Position = PoseStamped()
-    home_Position.pose.position.z = numpy.mean(list_Heights)
+
+    #subtract 20 meters from altitude because it has already taken off
+    home_Position.pose.position.z = numpy.mean(list_Heights) - 20
     home_Position.pose.position.y = numpy.mean(list_Norths)
     home_Position.pose.position.x = numpy.mean(list_Easts)
 
@@ -135,36 +136,11 @@ def main():
     #Call function to set mode and arm motor
     quad_Command(mode_List, True)
 
-    #take off to requested height
 
 
 
+    #Takeoff loop was previously here
 
-    #change to use FCU position and velocity.  Will add delay, but is safer
-
-    while (local_Pose.pose.position.z-ground_Level[0]) < .95 * travel_Height or (local_Pose.pose.position.z - ground_Level[0]) > 1.05*travel_Height:
-
-        if local_Pose.header.frame_id ==1:
-            if exitFlag == 0:
-                modeSet(0, "OFFBOARD")
-                time.sleep(0.1)
-            else:
-                time.sleep(3)
-                sys.exit()
-
-            takeoff_Waypoint = set_Local_Waypoint(0,0,travel_Height,0,0,2, 0)
-            pub_Position.publish(takeoff_Waypoint)
-            time.sleep(0.2)
-            height = local_Pose.pose.position.z - ground_Level[0]
-            print "Taking off.  The height is: ", height
-
-        else:
-            print "Lost fixed connection"
-            modeSet(0, "AUTO.LOITER")
-            time.sleep(0.2)
-    
-    print "The desired height has been reached: ", local_Pose.pose.position.z - ground_Level[0]
-    time.sleep(0.4)
 
 
 
@@ -175,7 +151,6 @@ def main():
     time0 = time.time()
 
     #fly for 15 seconds to build up speed
-    #while abs(local_Vel.twist.linear.x) < 6.5 and time.time() - time0 < 10:
     while time.time() - time0 < 15:
         first_Waypoint = set_Local_Waypoint(0,max_North,travel_Height, 0, 8, 0, 0)
         pub_Position.publish(first_Waypoint)
@@ -186,13 +161,10 @@ def main():
 
     time1 = time.time()
 
-    #check to allow turn.  if none, don't turn.  it !none, turn
+    #check to allow turn.  if none, don't turn.  if !none, turn
     north_Pos = None
 
     while time.time() - time1 < 5:
-        #Commented due to faulty dGPS data
-        #desired_North = local_Pose.pose.position.x - home_Position.pose.position.x + 10
-
 
         if local_Pose.header.frame_id == 1:
             north_Pos = local_Pose.pose.position.y - home_Position.pose.position.y
